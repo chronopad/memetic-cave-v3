@@ -1,0 +1,11 @@
+src/*model*
+malwares/
+
+malwares/
+ma_dir/
+ga_dir/
+malwares_tmp/
+ga_dir_tmp/
+ma_dir_tmp/
+patched/
+backup/
