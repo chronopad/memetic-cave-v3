@@ -1,7 +1,9 @@
 src/*model*
 malwares/
+repo/
 
-malwares/
+lab.ipynb
+
 ma_dir/
 ga_dir/
 malwares_tmp/
