@@ -2,12 +2,4 @@ src/*model*
 malwares/
 repo/
 
-lab.ipynb
-
-ma_dir/
-ga_dir/
-malwares_tmp/
-ga_dir_tmp/
-ma_dir_tmp/
-patched/
-backup/
+*.json

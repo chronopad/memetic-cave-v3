@@ -14,8 +14,8 @@ import r2pipe
 from deap import base
 from deap import creator
 from deap import tools
-
-from malconv_nn import malconv
+import thrember
+import lightgbm as lgb
 
 encoder.FLOAT_REPR = lambda o: format(o, '.2f')
 logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%m/%d %I:%M:%S', level=logging.DEBUG)
@@ -29,7 +29,6 @@ parser.add_argument('-s', '--statistics-dump', help='File to store statistics', 
                     default='testing.json')
 parser.add_argument('-sr', '--statistics-dump-rate', help='Rate to store statistics', type=int, default=1)
 parser.add_argument('-o', '--output', help='Folder to save modified binaries', type=str, default='')
-parser.add_argument('-nn', '--neural-network', help='NN to predict maliciousness', type=str, default='malconv.h5')
 parser.add_argument('-c', '--checkpoint', help='Continue from statistics file info', action="store_true")
 
 
@@ -663,7 +662,7 @@ class DEAP_implementation():
 
     def fitness_individual(self, individual):
         self.write_on_spaces_mmap(individual)
-        pred = self.NN.predict(self.binary)
+        pred = thrember.predict_sample(self.NN, open(self.binary, "rb").read())
         if pred < self.best_pred:
             self.best_pred = pred
             self.save_best_one(individual)
@@ -704,7 +703,7 @@ def main(PATH, binary_name, nn, args):
         logging.info("Binary: " + str(binary_name))
         cpu_time = time.perf_counter()
         binary = PATH + binary_name
-        prediction1 = n_network.predict(binary)
+        prediction1 = thrember.predict_sample(n_network, open(binary, "rb").read())
         logging.info("Initial prediction: [" + str(prediction1) + "]")
 
         success = False
@@ -755,7 +754,7 @@ def main(PATH, binary_name, nn, args):
             shutil.copy(f"{binary}incremental_original", binary)
             os.remove(f"{binary}incremental_original")
 
-        prediction2 = n_network.predict(binary)
+        prediction2 = thrember.predict_sample(n_network, open(binary, "rb").read())
 
         cpu_time = time.perf_counter() - cpu_time
 
@@ -777,15 +776,17 @@ def main(PATH, binary_name, nn, args):
                 genetic_optimization.close()
 
 
-def base_test(test, configuration, neural_network):
+def base_test(test, configuration):
     try:
         global args
         args = parser.parse_args()
         use_configuration(configuration)
         if args.output is not None and args.output != '' and args.path[-1:] != '/':
             args.output += '/'
+
         global n_network
-        n_network = neural_network(args.neural_network)
+        PE_PATH = "src/EMBER2024_PE.model"
+        n_network = lgb.Booster(model_file=PE_PATH)
         global report_json
         if args.checkpoint and os.path.isfile(args.statistics_dump):
             report_json = report_json_class(args.statistics_dump, args.statistics_dump_rate, checkpoint=True)
@@ -820,8 +821,6 @@ def base_test(test, configuration, neural_network):
 
 def use_configuration(configuration):
     args.path = configuration['path']
-    args.statistics_dump = configuration['statistics_dump']
-    args.neural_network = configuration['neural_network']
     args.cross = configuration['cross']
     args.checkpoint = configuration['checkpoint']
     args.mutation_I = configuration['mutation_I']
@@ -832,13 +831,11 @@ def use_configuration(configuration):
 
 if __name__ == '__main__':
     configuration = dict()
-    configuration['path'] = "/home/yuste/repos/samples_v2/revision_2/test_public_code (copy)"
-    configuration['statistics_dump'] = "stats.json"
-    configuration['neural_network'] = "malconv.h5"
+    configuration['path'] = '/home/chronopad/Documents/projects/memetic-cave-v3/malwares/expgen-b1'
     configuration['cross'] = 4
     configuration['checkpoint'] = False
     configuration['mutation_I'] = 0.1
     configuration['mutation_II'] = 0.1
     configuration['mutation_method'] = 2
     configuration['section_expand'] = -1
-    base_test(main, configuration, malconv)
+    base_test(main, configuration)
