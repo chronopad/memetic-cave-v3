@@ -533,11 +533,14 @@ class DEAP_implementation():
                     mate_1 = self.toolbox.clone(elitist_ind)
                     mate_2 = self.toolbox.clone(tournament_ind)
 
-                    curr_offspring_ = [mate_1, mate_2]
                     if random.random() < self.CXPB:
-                        curr_offspring_ = self.toolbox.crossover(mate_1, mate_2, 2, block_size)
+                        curr_offspring = self.toolbox.crossover(mate_1, mate_2, 2, block_size)
+                    else:
+                        curr_offspring = [mate_1, mate_2]
+                        for child in curr_offspring:
+                            del child.fitness.values
 
-                    for mate_offspring in curr_offspring_:
+                    for mate_offspring in curr_offspring:
                         offspring.append(mate_offspring)
             logging.debug("Done crossover. Offspring length: " + str(len(offspring)))
 
