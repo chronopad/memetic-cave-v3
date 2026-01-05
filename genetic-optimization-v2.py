@@ -533,8 +533,9 @@ class DEAP_implementation():
                     mate_1 = self.toolbox.clone(elitist_ind)
                     mate_2 = self.toolbox.clone(tournament_ind)
 
+                    curr_offspring_ = [mate_1, mate_2]
                     if random.random() < self.CXPB:
-                        curr_offspring_ = [mate_1, mate_2]
+                        curr_offspring_ = self.toolbox.crossover(mate_1, mate_2, 2, block_size)
 
                     for mate_offspring in curr_offspring_:
                         offspring.append(mate_offspring)
