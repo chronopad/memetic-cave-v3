@@ -74,6 +74,16 @@ def geneticOptimizationYuste(targetDir):
 
     run_cmd(cmd)
 
+def memeticOptimization(filepath):
+    cmd = (
+        f'{LOAD_PYENV}; '
+        f'pyenv activate {ENVIRONMENT_1}; '
+        f'python3 memetic-optimization-v1.py {filepath}; '
+        f'pyenv deactivate'
+    )
+
+    run_cmd(cmd)
+
 outdir = f"malwares/expgen-b{testId}"
 if os.path.isdir(outdir):
     os.system(f"rm -rf {outdir}")
@@ -85,6 +95,7 @@ initEMBER2024PEScore = getEMBER2024PEScore(sourceDir, fileHash)
 
 print("Starting modification...")
 geneticOptimizationYuste(outdir)
+# memeticOptimization(f"{sourceDir}/{fileHash}.exe")
 print("Finished modification!")
 
 finalMalConvScore = getMalConvScore(outdir, fileHash)
@@ -97,12 +108,12 @@ print(f"Source Dir     : {os.path.abspath(sourceDir)}")
 print(f"Optimized Dir  : {os.path.abspath(outdir)}")
 print("-" * 60)
 print("Initial scores")
-print(f"  MalConv      : {initMalConvScore:.6f}")
-print(f"  EMBER2024 PE : {initEMBER2024PEScore:.6f}")
+print(f"  MalConv      : {1 if initMalConvScore > 0.5 else 0} ({initMalConvScore:.6f})")
+print(f"  EMBER2024 PE : {1 if initEMBER2024PEScore > 0.5 else 0} ({initEMBER2024PEScore:.6f})")
 print("-" * 60)
 print("Final scores")
-print(f"  MalConv      : {finalMalConvScore:.6f}")
-print(f"  EMBER2024 PE : {finalEMBER2024PEScore:.6f}")
+print(f"  MalConv      : {1 if finalMalConvScore > 0.5 else 0} ({finalMalConvScore:.6f})")
+print(f"  EMBER2024 PE : {1 if finalEMBER2024PEScore > 0.5 else 0} ({finalEMBER2024PEScore:.6f})")
 print("-" * 60)
 print("Delta")
 print(f"  MalConv      : {finalMalConvScore - initMalConvScore:+.6f}")
