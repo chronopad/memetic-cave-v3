@@ -652,47 +652,48 @@ def getPredictionScore(filepath):
 
 def main(binary):
     try:
-        logging.info(f"Target PE: {binary}")
-        cpu_time = time.perf_counter()  # Log CPU start time
-        success = False
-        sizeRatio = 10                  # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
+        with Timeout(1800):
+            logging.info(f"Target PE: {binary}")
+            cpu_time = time.perf_counter()  # Log CPU start time
+            success = False
+            sizeRatio = 10                  # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
 
-        while not success and sizeRatio <= 100:
-            with Timeout(900):
-                logging.info(f"[*] Trying with size {sizeRatio}%")
-                shutil.copy(binary, f"{binary}_inc")
+            while not success and sizeRatio <= 100:
+                with Timeout(900):
+                    logging.info(f"[*] Trying with size {sizeRatio}%")
+                    shutil.copy(binary, f"{binary}_inc")
 
-                r2 = r2_bind(f"{binary}_inc")
-                spaces = r2.main(sizeRatio, -1)
-                try: r2.close()
-                except: pass 
+                    r2 = r2_bind(f"{binary}_inc")
+                    spaces = r2.main(sizeRatio, -1)
+                    try: r2.close()
+                    except: pass 
 
-            if spaces["expand"] is None:
-                print(f"[!] Expansion failure occured")               # Cave expansion failure case, exit immediately
-                success = True 
-                generation = 9999999999999999
-                sizeRatio = 9999999999999999
-            else:
-                optimizer = MemeticOptimizer(f"{binary}_inc", spaces) # MemeticOptimizer initialization
-                generation, success = optimizer.optimize()
+                if spaces["expand"] is None:
+                    print(f"[!] Expansion failure occured")               # Cave expansion failure case, exit immediately
+                    success = True 
+                    generation = 9999999999999999
+                    sizeRatio = 9999999999999999
+                else:
+                    optimizer = MemeticOptimizer(f"{binary}_inc", spaces) # MemeticOptimizer initialization
+                    generation, success = optimizer.optimize()
+                
+                if not success:
+                    logging.info(f"[-] Unsuccessful with size {sizeRatio}%")
+                    shutil.copy(binary, f"{binary}_inc")
+                    if sizeRatio < 15: sizeRatio += 3  # Increment ratio by 3 percent
+                    else: sizeRatio += 10              # Increment ratio by 10 percent
             
-            if not success:
-                logging.info(f"[-] Unsuccessful with size {sizeRatio}%")
-                shutil.copy(binary, f"{binary}_inc")
-                if sizeRatio < 15: sizeRatio += 3  # Increment ratio by 3 percent
-                else: sizeRatio += 10              # Increment ratio by 10 percent
-        
-        if not success:                            # Failure scenario
-            logging.info("[-] Successful AE is not found")
-            os.remove(f"{binary}_inc")
-        else:                                      # Success scenario
-            logging.info("[*] Successful AE found!")
-            shutil.copy(f"{binary}_inc", f"{binary}")
-            os.remove(f"{binary}_inc")
-        
-        cpu_time = time.perf_counter() - cpu_time  # Calculate time elapsed
-        logging.info(f"[*] Generation: {generation}")
-        logging.info(f"[*] Time elapsed: {cpu_time}")
+            if not success:                            # Failure scenario
+                logging.info("[-] Successful AE is not found")
+                os.remove(f"{binary}_inc")
+            else:                                      # Success scenario
+                logging.info("[*] Successful AE found!")
+                shutil.copy(f"{binary}_inc", f"{binary}")
+                os.remove(f"{binary}_inc")
+            
+            cpu_time = time.perf_counter() - cpu_time  # Calculate time elapsed
+            logging.info(f"[*] Generation: {generation}")
+            logging.info(f"[*] Time elapsed: {cpu_time}")
     
     except NotPE:
         logging.error(f"{binary} is not a valid PE file")

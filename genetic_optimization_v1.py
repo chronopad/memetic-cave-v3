@@ -703,68 +703,69 @@ class DEAP_implementation():
 
 def main(PATH, binary_name, nn, args):
     try:
-        logging.info("Binary: " + str(binary_name))
-        cpu_time = time.perf_counter()
-        binary = os.path.join(PATH, binary_name)
-        prediction1 = n_network.predict(binary)
-        logging.info("Initial prediction: [" + str(prediction1) + "]")
+        with Timeout(1800):
+            logging.info("Binary: " + str(binary_name))
+            cpu_time = time.perf_counter()
+            binary = os.path.join(PATH, binary_name)
+            prediction1 = n_network.predict(binary)
+            logging.info("Initial prediction: [" + str(prediction1) + "]")
 
-        success = False
-        size = INIT_SIZE_RATIO
-        shutil.copy(binary, f"{binary}incremental_original")
-        logging.info("Trying with size " + str(size) + "%")
+            success = False
+            size = INIT_SIZE_RATIO
+            shutil.copy(binary, f"{binary}incremental_original")
+            logging.info("Trying with size " + str(size) + "%")
 
-        while not success and size <= 100:
-            with Timeout(900):
-                logging.info("Opening binary")
-                logging.info("Size: " + str(size) + "%")
-                r2 = r2_bind(binary + "incremental_original")
-                logging.info("Expanding binary")
-                spaces = r2.main(size, args.section_expand)
-                try:
-                    r2.close()
-                except:
-                    pass
+            while not success and size <= 100:
+                with Timeout(900):
+                    logging.info("Opening binary")
+                    logging.info("Size: " + str(size) + "%")
+                    r2 = r2_bind(binary + "incremental_original")
+                    logging.info("Expanding binary")
+                    spaces = r2.main(size, args.section_expand)
+                    try:
+                        r2.close()
+                    except:
+                        pass
 
-            if spaces['expand'] is None:
-                print("[!] Spaces['expand'] is None")
-                iteration = 9999999999999999
-                success = True
-                predictions_time_marks = "1"
-                size = 9999999999999999
-            else:
-                genetic_optimization = DEAP_implementation(binary + "incremental_original", spaces, NN=n_network,
-                                                           mutation=args.mutation_method, MUTPBI=args.mutation_I,
-                                                           MUTPBII=args.mutation_II)
-                iteration, success, predictions_time_marks = genetic_optimization.optimize(filename=binary_name)
+                if spaces['expand'] is None:
+                    print("[!] Spaces['expand'] is None")
+                    iteration = 9999999999999999
+                    success = True
+                    predictions_time_marks = "1"
+                    size = 9999999999999999
+                else:
+                    genetic_optimization = DEAP_implementation(binary + "incremental_original", spaces, NN=n_network,
+                                                            mutation=args.mutation_method, MUTPBI=args.mutation_I,
+                                                            MUTPBII=args.mutation_II)
+                    iteration, success, predictions_time_marks = genetic_optimization.optimize(filename=binary_name)
+
+                if not success:
+                    if size < 15:
+                        size += 3
+                    else:
+                        size += 10
+                    logging.info("[!] Unsuccesful, incrementing size to " + str(size) + "%")
+                    shutil.copy(binary, f"{binary}incremental_original")
 
             if not success:
-                if size < 15:
-                    size += 3
-                else:
-                    size += 10
-                logging.info("[!] Unsuccesful, incrementing size to " + str(size) + "%")
-                shutil.copy(binary, f"{binary}incremental_original")
+                logging.info("[-] Did not find an evasive sample")
+                logging.debug("Restoring original sample")
+                path = os.path.abspath(f"{binary}incremental_original")
+                os.remove(path)
+            else:
+                logging.info("[+] Found an evasive sample!")
+                logging.debug("Deleting original sample")
+                shutil.copy(f"{binary}incremental_original", binary)
+                os.remove(f"{binary}incremental_original")
 
-        if not success:
-            logging.info("[-] Did not find an evasive sample")
-            logging.debug("Restoring original sample")
-            path = os.path.abspath(f"{binary}incremental_original")
-            os.remove(path)
-        else:
-            logging.info("[+] Found an evasive sample!")
-            logging.debug("Deleting original sample")
-            shutil.copy(f"{binary}incremental_original", binary)
-            os.remove(f"{binary}incremental_original")
+            prediction2 = n_network.predict(binary)
 
-        prediction2 = n_network.predict(binary)
+            cpu_time = time.perf_counter() - cpu_time
+            logging.info(f"[*] Generation: {iteration}")
+            logging.info(f"[*] Time elapsed: {cpu_time}")
+            logging.info(f"[*] Size ratio: {INIT_SIZE_RATIO}/{size}")
 
-        cpu_time = time.perf_counter() - cpu_time
-        logging.info(f"[*] Generation: {iteration}")
-        logging.info(f"[*] Time elapsed: {cpu_time}")
-        logging.info(f"[*] Size ratio: {INIT_SIZE_RATIO}/{size}")
-
-        report_json.save_prediction(binary_name, prediction1, prediction2, iteration, cpu_time, spaces, size)
+            report_json.save_prediction(binary_name, prediction1, prediction2, iteration, cpu_time, spaces, size)
 
     except NotPE:
         logging.error('{} is not a valid pe file, skipping...'.format(str(binary_name)))
