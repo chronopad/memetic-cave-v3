@@ -758,6 +758,8 @@ def main(PATH, binary_name, nn, args):
         prediction2 = n_network.predict(binary)
 
         cpu_time = time.perf_counter() - cpu_time
+        logging.info(f"Generation: {iteration}")
+        logging.info(f"Time taken: {cpu_time}")
 
         report_json.save_prediction(binary_name, prediction1, prediction2, iteration, cpu_time, spaces, size)
 
