@@ -4,12 +4,13 @@ import subprocess
 import re
 
 if len(sys.argv) <= 3:
-    print("python3 pipeline-1.py <testId> <sourceDir> <fileHash> [--verbose]")
+    print("python3 pipeline-1.py <testId> <sourceDir> <fileHash> <optimizer> [--verbose]")
     sys.exit(1)
 
 testId    = sys.argv[1]
 sourceDir = sys.argv[2]
 fileHash  = sys.argv[3]
+optimizer = sys.argv[4]
 VERBOSE   = "--verbose" in sys.argv
 
 ENVIRONMENT_1 = "memetic-cave"
@@ -78,7 +79,7 @@ def memeticOptimization(filepath):
     cmd = (
         f'{LOAD_PYENV}; '
         f'pyenv activate {ENVIRONMENT_1}; '
-        f'python3 memetic-optimization-v1.py {filepath}; '
+        f'python3 memetic-optimization-v2.py {filepath}; '
         f'pyenv deactivate'
     )
 
@@ -94,8 +95,8 @@ initMalConvScore = getMalConvScore(sourceDir, fileHash)
 initEMBER2024PEScore = getEMBER2024PEScore(sourceDir, fileHash)
 
 print("Starting modification...")
-# geneticOptimizationYuste(outdir)
-memeticOptimization(f"{outdir}/{fileHash}.exe")
+if optimizer == "genetic": geneticOptimizationYuste(outdir)
+elif optimizer == "memetic": memeticOptimization(f"{outdir}/{fileHash}.exe")
 print("Finished modification!")
 
 finalMalConvScore = getMalConvScore(outdir, fileHash)
