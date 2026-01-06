@@ -69,7 +69,7 @@ def geneticOptimizationYuste(targetDir):
     cmd = (
         f'{LOAD_PYENV}; '
         f'pyenv activate {ENVIRONMENT_1}; '
-        f'python3 genetic-optimization-v1.py --path {targetDir}; '
+        f'python3 genetic_optimization_v1.py --path {targetDir}; '
         f'pyenv deactivate'
     )
 
@@ -79,7 +79,7 @@ def memeticOptimization(filepath):
     cmd = (
         f'{LOAD_PYENV}; '
         f'pyenv activate {ENVIRONMENT_1}; '
-        f'python3 memetic-optimization-v2.py {filepath}; '
+        f'python3 memetic_optimization_v2.py {filepath}; '
         f'pyenv deactivate'
     )
 

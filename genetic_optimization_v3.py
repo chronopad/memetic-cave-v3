@@ -729,7 +729,7 @@ def main(PATH, binary_name):
 
         cpu_time = time.perf_counter() - cpu_time  # Calculate time elapsed
         logging.info(f"[*] Generation: {generation}")
-        print(f"[*] Time elapsed: {cpu_time}")
+        logging.info(f"[*] Time elapsed: {cpu_time}")
 
     except NotPE:
         logging.error(f"{binary} is not a valid PE file")

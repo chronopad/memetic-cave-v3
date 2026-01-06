@@ -32,6 +32,8 @@ parser.add_argument('-o', '--output', help='Folder to save modified binaries', t
 parser.add_argument('-nn', '--neural-network', help='NN to predict maliciousness', type=str, default='malconv.h5')
 parser.add_argument('-c', '--checkpoint', help='Continue from statistics file info', action="store_true")
 
+INIT_SIZE_RATIO = 10
+
 
 class NotPE(Exception):
     pass
@@ -684,7 +686,7 @@ class DEAP_implementation():
     def open_r2v(self):
         self.close()
         self.r2 = r2pipe.open(self.binary, ['-2', '-w'])
-        self.closed = False
+        self.closed = FalsePATH + binary_name
         self.r2_virtual = True
 
     def close(self):
@@ -703,12 +705,12 @@ def main(PATH, binary_name, nn, args):
     try:
         logging.info("Binary: " + str(binary_name))
         cpu_time = time.perf_counter()
-        binary = PATH + binary_name
+        binary = os.path.join(PATH, binary_name)
         prediction1 = n_network.predict(binary)
         logging.info("Initial prediction: [" + str(prediction1) + "]")
 
         success = False
-        size = 1
+        size = INIT_SIZE_RATIO
         shutil.copy(binary, f"{binary}incremental_original")
         logging.info("Trying with size " + str(size) + "%")
 
@@ -758,8 +760,9 @@ def main(PATH, binary_name, nn, args):
         prediction2 = n_network.predict(binary)
 
         cpu_time = time.perf_counter() - cpu_time
-        logging.info(f"Generation: {iteration}")
-        logging.info(f"Time taken: {cpu_time}")
+        logging.info(f"[*] Generation: {iteration}")
+        logging.info(f"[*] Time elapsed: {cpu_time}")
+        logging.info(f"[*] Size ratio: {INIT_SIZE_RATIO}/{size}")
 
         report_json.save_prediction(binary_name, prediction1, prediction2, iteration, cpu_time, spaces, size)
 
@@ -797,9 +800,7 @@ def base_test(test, configuration, neural_network):
             print("Give a path")
             return
         else:
-            if args.path[-1:] != '/':
-                args.path += '/'
-            PATH = '/home/chronopad/Documents/projects/memetic-cave-v3/' + args.path
+            PATH = os.path.abspath(args.path)
             files = os.listdir(PATH)
             i = 0
             for f in files:

@@ -1,0 +1,2 @@
+file_hash,optimizer,generation,time_taken,size_ratio,initial_score,final_score,dataset_path,output_path
+75f4a4b270d8b8d9b651537ceeea3dee2bd39915f83d089cd4286661fa93556f,MAop_v2,0,3.211647,10/10,1 (0.7502750158309937),0 (0.006120000034570694),massgen-b1,massgen-g1

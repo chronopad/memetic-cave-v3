@@ -19,6 +19,7 @@ args = parser.parse_args()
 logging.basicConfig(level=logging.INFO)
 
 model = malconv("src/MalConv.model")
+INIT_SIZE_RATIO = 10
 
 class NotPE(Exception):
     pass
@@ -653,13 +654,12 @@ class MemeticOptimizer():
 def getPredictionScore(filepath):
     return model.predict(filepath)
 
-def main():
+def main(binary):
     try:
-        binary = args.file_path
         logging.info(f"Target PE: {binary}")
         cpu_time = time.perf_counter()  # Log CPU start time
         success = False
-        sizeRatio = 10                  # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
+        sizeRatio = INIT_SIZE_RATIO     # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
 
         while not success and sizeRatio <= 100:
             with Timeout(900):
@@ -697,6 +697,7 @@ def main():
         cpu_time = time.perf_counter() - cpu_time  # Calculate time elapsed
         logging.info(f"[*] Generation: {generation}")
         logging.info(f"[*] Time elapsed: {cpu_time}")
+        logging.info(f"[*] Size ratio: {INIT_SIZE_RATIO}/{sizeRatio}")
     
     except NotPE:
         logging.error(f"{binary} is not a valid PE file")
@@ -711,4 +712,4 @@ def main():
             os.remove(f"{binary}_inc_original")    # Remove leftover copies
 
 if __name__ == '__main__':
-    main()
+    main(args.file_path)

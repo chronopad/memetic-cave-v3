@@ -650,9 +650,8 @@ class MemeticOptimizer():
 def getPredictionScore(filepath):
     return model.predict(filepath)
 
-def main():
+def main(binary):
     try:
-        binary = args.file_path
         logging.info(f"Target PE: {binary}")
         cpu_time = time.perf_counter()  # Log CPU start time
         success = False
@@ -708,4 +707,4 @@ def main():
             os.remove(f"{binary}_inc_original")    # Remove leftover copies
 
 if __name__ == '__main__':
-    main()
+    main(args.file_path)
