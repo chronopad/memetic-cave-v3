@@ -622,10 +622,6 @@ class MemeticOptimizer():
         shutil.copy(self.original_binary, self.binary)
         self.write_on_spaces_mmap(self.best_individual)
 
-def runCommand(cmd):
-    p = subprocess.run(["bash", "-c", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    return p.stdout
-
 def getPredictionScore(filepath):
     return model.predict(filepath)
 
@@ -635,7 +631,7 @@ def main():
         logging.info(f"Target PE: {binary}")
         cpu_time = time.perf_counter()  # Log CPU start time
         success = False
-        sizeRatio = 1                   # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
+        sizeRatio = 10                  # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
 
         while not success and sizeRatio <= 100:
             with Timeout(900):
@@ -648,19 +644,19 @@ def main():
                 except: pass 
 
             if spaces["expand"] is None:
-                print(f"[!] Expansion failure occured")           # Cave expansion failure case, exit immediately
+                print(f"[!] Expansion failure occured")               # Cave expansion failure case, exit immediately
                 success = True 
                 generation = 9999999999999999
                 sizeRatio = 9999999999999999
             else:
-                optimizer = MemeticOptimizer(f"{binary}_inc", spaces)   # MemeticOptimizer initialization
+                optimizer = MemeticOptimizer(f"{binary}_inc", spaces) # MemeticOptimizer initialization
                 generation, success = optimizer.optimize()
             
             if not success:
-                if sizeRatio < 15: sizeRatio += 3  # Increment ratio by 3 percent
-                else: sizeRatio += 10              # Increment ratio by 10 percent
                 logging.info(f"[-] Unsuccessful with size {sizeRatio}%")
                 shutil.copy(binary, f"{binary}_inc")
+                if sizeRatio < 15: sizeRatio += 3  # Increment ratio by 3 percent
+                else: sizeRatio += 10              # Increment ratio by 10 percent
         
         if not success:                            # Failure scenario
             logging.info("[-] Successful AE is not found")
@@ -672,7 +668,7 @@ def main():
         
         cpu_time = time.perf_counter() - cpu_time  # Calculate time elapsed
         logging.info(f"[*] Generation: {generation}")
-        print(f"[*] Time elapsed: {cpu_time}")
+        logging.info(f"[*] Time elapsed: {cpu_time}")
     
     except NotPE:
         logging.error(f"{binary} is not a valid PE file")

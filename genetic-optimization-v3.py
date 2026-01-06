@@ -692,7 +692,7 @@ def main(PATH, binary_name):
         logging.info(f"Target PE: {binary}")
         cpu_time = time.perf_counter()  # Log CPU start time
         success = False
-        sizeRatio = 1                   # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
+        sizeRatio = 10                  # Initial size set to 1% of binary length (Enchancing AEs paper uses 257 bytes as static size, original paper uses 1% as starting size)
 
         while not success and sizeRatio <= 100:
             with Timeout(900):

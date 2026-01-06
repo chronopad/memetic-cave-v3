@@ -68,7 +68,7 @@ def geneticOptimizationYuste(targetDir):
     cmd = (
         f'{LOAD_PYENV}; '
         f'pyenv activate {ENVIRONMENT_1}; '
-        f'python3 genetic-optimization-v3.py --path {targetDir}; '
+        f'python3 genetic-optimization-v1.py --path {targetDir}; '
         f'pyenv deactivate'
     )
 
