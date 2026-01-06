@@ -1,0 +1,3 @@
+file_hash,optimizer,generation,time_taken,size_ratio,initial_score,final_score,dataset_path,output_path
+bb8103bc13c589989b76b328f7b7ffed273fcfec54b2d614c7a360cee0b1f63d,MAop_v2,2,8.636195,'10-10,1 (0.9987769722938538),0 (0.476936012506485),massgen-b2,massgen-r2
+82481935b82a5626851004103733bd76a3fc2a978d162a44ca3b5cc2d8b0b046,MAop_v2,12,45.402642,'10-10,1 (0.9996500015258789),0 (0.4972259998321533),massgen-b2,massgen-r2

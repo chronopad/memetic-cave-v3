@@ -10,7 +10,8 @@ import csv
 from src.malconv_nn import malconv
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description="Mass testing utility for GAop_v1, GAop_v3, and MAop_v2")
+parser = argparse.ArgumentParser(description="Mass testing utility for GAop_v1 and MAop_v2")
+parser.add_argument("optimizer", help="Optimizer to use: GAop_v1, MAop_v2")
 parser.add_argument("filtered_path", help="Path to filtered dataset directory")
 parser.add_argument("output_path", help="Path to output AE directory")
 parser.add_argument("--test-path", default="malwares/tmp_dir", help="Path to test directory")
@@ -21,7 +22,9 @@ model = malconv("src/MalConv.model")
 filtered_path = os.path.abspath(args.filtered_path)   # Dataset directory
 output_path = os.path.abspath(args.output_path)       # Output directory
 test_path = os.path.abspath(args.test_path)           # Test directory
-report_path = os.path.abspath(args.report_file)
+report_path = os.path.abspath(args.report_file)       # Report file path
+optimizer = args.optimizer
+if optimizer not in ["GAop_v1", "MAop_v2"]: raise ValueError("Invalid optimizer specified. Choose either 'GAop_v1' or 'MAop_v2'.")
 
 REPORT_FIELDS = [
     "file_hash",
@@ -43,8 +46,11 @@ def runCommand(cmd):
     return p.stdout + p.stderr
 
 def modifyFile(filepath):
-    # command = (f'python3 memetic_optimization_v2.py {filepath}')
-    command = (f'python3 genetic_optimization_v1.py --path {os.path.dirname(filepath)}')
+    if optimizer == "GAop_v1":
+        command = (f'python3 genetic_optimization_v1.py --path {os.path.dirname(filepath)}')
+    elif optimizer == "MAop_v2":
+        command = (f'python3 memetic_optimization_v2.py {filepath}')
+
     output = runCommand(command)
     output = output.replace("\\n", "\n")
     gen_re  = re.search(r"\[\*\]\s*Generation:\s*(\d+)", output)
@@ -59,7 +65,7 @@ def modifyFile(filepath):
     init_size_ratio  = int(size_re.group(1))
     final_size_ratio = int(size_re.group(2))
 
-    return generation, cpu_time, f"{init_size_ratio}/{final_size_ratio}"
+    return generation, cpu_time, f"{init_size_ratio}-{final_size_ratio}"
 
 def saveToReport(row_content):
     file_exists = os.path.isfile(report_path)
@@ -109,10 +115,10 @@ for idx, f in enumerate(target_files):
 
         row_content = {
             "file_hash": original_hash,
-            "optimizer": "MAop_v2",
+            "optimizer": optimizer,
             "generation": generation,
             "time_taken": time_taken,
-            "size_ratio": size_ratio,
+            "size_ratio": "'" + size_ratio,
             "initial_score": f"{1 if initial_score > 0.5 else 0} ({initial_score})",
             "final_score": f"{1 if final_score > 0.5 else 0} ({final_score})",
             "dataset_path": filtered_path.split("/")[-1],
