@@ -5,8 +5,6 @@ import argparse
 import signal
 import shutil
 import os
-import subprocess
-import hashlib
 
 from deap import base, creator, tools
 from src.malconv_nn import malconv
@@ -503,6 +501,12 @@ class MemeticOptimizer():
             population = tools.selBest(offspring, population_size - 1) # Select top k-1 offsprings
             for ind in tools.selBest(elitism_group, 1):                # Select best ind from elitism_group
                 population.append(ind)                                 # Total population = population_size
+
+            best = tools.selBest(population, 1)[0] # Select best ind from population
+            best_mod = self.local_hill_climb(best) # Hill climb for the best individual
+            population.remove(best)
+            population.append(best_mod)
+
             del fitnesses
             del offspring
             del offspring_mut
@@ -571,6 +575,27 @@ class MemeticOptimizer():
             
             curr_offspring.append(curr_individual)
         return curr_offspring
+    
+    def local_hill_climb(self, individual, steps=50, radius=8):
+        best = self.toolbox.clone(individual)
+        best_fit = best.fitness.values[0]
+
+        for _ in range(steps):
+            candidate = self.toolbox.clone(best)
+            positions = random.sample(range(len(candidate)), k=radius) # Get k random positions
+            for pos in positions:
+                candidate[pos] = random.randint(0, 255)                # Reroll bytes in positions
+            
+            curr_fit = self.toolbox.evaluate(candidate)[0]             # Evaluate current candidate
+            candidate.fitness.values = (curr_fit,)                     # Update candidate's fitness score
+
+            if curr_fit > best_fit:
+                best = self.toolbox.clone(candidate)                   # Update best candidate
+                best_fit = curr_fit                                    # Update best fit
+
+                if self.undetected:                              # Early break if undetected
+                    break 
+        return best                                                    # Return the best candidate
 
     def write_on_spaces_mmap(self, pop):
         try:
