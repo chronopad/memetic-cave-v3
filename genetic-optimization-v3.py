@@ -1,35 +1,49 @@
-import time
-import random
-import logging
 import argparse
-import signal
-import shutil
-import os
-import subprocess
-import hashlib
-
-from deap import base, creator, tools
-from src.malconv_nn import malconv
+import json
+import logging
 import mmap
-
+import os
+import random
+import shutil
+import signal
+import threading
+import time
+from json import encoder
 import pefile
 import r2pipe
+from deap import base
+from deap import creator
+from deap import tools
 
-parser = argparse.ArgumentParser(description="MAop_v1 optimizer algorithm script")
-parser.add_argument("file_path", help="Path to malware file")
+from src.malconv_nn import malconv
+
+encoder.FLOAT_REPR = lambda o: format(o, '.2f')
+logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%m/%d %I:%M:%S', level=logging.DEBUG)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-b', '--binary', help='Binary file', type=str,
+                    default='')
+parser.add_argument('-p', '--path', help='Path directory containing samples', type=str,
+                    default='')
+parser.add_argument('-s', '--statistics-dump', help='File to store statistics', type=str,
+                    default='testing.json')
+parser.add_argument('-sr', '--statistics-dump-rate', help='Rate to store statistics', type=int, default=1)
+parser.add_argument('-o', '--output', help='Folder to save modified binaries', type=str, default='')
+parser.add_argument('-nn', '--neural-network', help='NN to predict maliciousness', type=str, default='malconv.h5')
+parser.add_argument('-c', '--checkpoint', help='Continue from statistics file info', action="store_true")
 args = parser.parse_args()
-logging.basicConfig(level=logging.INFO)
-
-model = malconv("src/MalConv.model")
 
 class NotPE(Exception):
     pass
 
+
 class InvalidArgs(Exception):
     pass
 
+
 class InvalidExpandingSectionsReq(Exception):
     pass
+
 
 class r2_bind():
     def __init__(self, binary):
@@ -276,7 +290,10 @@ class r2_bind():
             f = open(self.binary, "r+b")
             mm = mmap.mmap(f.fileno(), 0, mmap.ACCESS_WRITE)
 
-            fout = open(self.binary + ".copy", "w+b")
+            if args.output != None and args.output != '':
+                fout = open(args.output + os.path.basename(self.binary), "w+b")
+            else:
+                fout = open(self.binary + ".copy", "w+b")
 
             for counter, section in enumerate(sections_info):
                 if sections_info[counter]['size'] > 0 and sections_info[counter]['paddr'] > 0:
@@ -302,8 +319,11 @@ class r2_bind():
             f.close()
             fout.close()
             mm.close()
-            self.overwrite_file(self.binary + ".copy")
-            self.reopen_r2_pe()
+            if args.output != None and args.output != '':
+                self.reopen_r2_pe(args.output + os.path.basename(self.binary))
+            else:
+                self.overwrite_file(self.binary + ".copy")
+                self.reopen_r2_pe()
             return initial_address
 
         except InvalidExpandingSectionsReq:
@@ -376,8 +396,9 @@ class r2_bind():
                 start_addr -= size
         return result
 
+
 class Timeout():
-    class TimeoutError(Exception):
+    class Timeout(Exception):
         pass
 
     def __init__(self, sec):
@@ -391,9 +412,49 @@ class Timeout():
         signal.alarm(0)
 
     def raise_timeout(self, *args):
-        raise Timeout.TimeoutError()
+        raise Timeout.Timeout()
 
-class MemeticOptimizer():
+
+class report_json_class():
+    def __init__(self, file, dump_rate, checkpoint=False):
+        self.file = file
+        self.data = {}
+        self.semaphore = threading.BoundedSemaphore(value=1)
+        self.dump_rate = dump_rate
+        self.recover_from_file(checkpoint)
+
+    def save_prediction(self, sample, old_prediction, new_prediction, iteration, cpu_time, spaces, size):
+        with self.semaphore:
+            predictions = {}
+            predictions['clean'] = str(old_prediction)
+            predictions['obfuscated'] = str(new_prediction)
+            predictions['generation'] = str(iteration)
+            predictions['cpu_time'] = cpu_time
+            predictions['spaces'] = spaces
+            predictions['size'] = size
+            self.data[sample] = predictions
+            self.dump_to_file()
+
+    def dump_to_file(self):
+        with open(self.file, 'w') as f:
+            json.dump(self.data, f)
+        logging.debug("Dumped info to file " + str(self.file))
+
+    def recover_from_file(self, checkpoint):
+        try:
+            self.already_taken_files = []
+            if checkpoint:
+                with open(self.file, 'r') as f:
+                    predictions = json.load(f)
+                for sample in predictions:
+                    self.already_taken_files.append(sample)
+                    self.data[sample] = predictions[sample]
+        except Exception as e:
+            logging.exception('An error occurred while trying to recover checkpoint from ' + str(self.file))
+            logging.error(e, exc_info=True)
+
+
+class DEAP_implementation():
     def __init__(self, binary, spaces, CXPB=0.6, MUTPBI=0.1, MUTPBII=0.1, maxGeneration=50):
         self.binary = binary
         self.spaces = spaces
@@ -622,16 +683,12 @@ class MemeticOptimizer():
         shutil.copy(self.original_binary, self.binary)
         self.write_on_spaces_mmap(self.best_individual)
 
-def runCommand(cmd):
-    p = subprocess.run(["bash", "-c", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    return p.stdout
-
 def getPredictionScore(filepath):
-    return model.predict(filepath)
+    return n_network.predict(filepath)
 
-def main():
+def main(PATH, binary_name):
     try:
-        binary = args.file_path
+        binary = PATH + binary_name
         logging.info(f"Target PE: {binary}")
         cpu_time = time.perf_counter()  # Log CPU start time
         success = False
@@ -653,7 +710,7 @@ def main():
                 generation = 9999999999999999
                 sizeRatio = 9999999999999999
             else:
-                optimizer = MemeticOptimizer(f"{binary}_inc", spaces)   # MemeticOptimizer initialization
+                optimizer = DEAP_implementation(f"{binary}_inc", spaces)   # MemeticOptimizer initialization
                 generation, success = optimizer.optimize()
             
             if not success:
@@ -661,7 +718,7 @@ def main():
                 else: sizeRatio += 10              # Increment ratio by 10 percent
                 logging.info(f"[-] Unsuccessful with size {sizeRatio}%")
                 shutil.copy(binary, f"{binary}_inc")
-        
+
         if not success:                            # Failure scenario
             logging.info("[-] Successful AE is not found")
             os.remove(f"{binary}_inc")
@@ -669,14 +726,14 @@ def main():
             logging.info("[*] Successful AE found!")
             shutil.copy(f"{binary}_inc", f"{binary}")
             os.remove(f"{binary}_inc")
-        
+
         cpu_time = time.perf_counter() - cpu_time  # Calculate time elapsed
         logging.info(f"[*] Generation: {generation}")
         print(f"[*] Time elapsed: {cpu_time}")
-    
+
     except NotPE:
         logging.error(f"{binary} is not a valid PE file")
-    except Timeout.TimeoutError:
+    except Timeout.Timeout:
         logging.error("Timeout")
     except Exception as e:
         logging.exception("An unexpected error has occured")
@@ -685,6 +742,72 @@ def main():
             os.remove(f"{binary}_inc")             # Remove leftover copies
         if os.path.exists(f"{binary}_inc_original"): 
             os.remove(f"{binary}_inc_original")    # Remove leftover copies
+        if 'r2' in locals():
+            if not r2.is_closed():
+                r2.close()                         # Close r2
+
+def base_test(test, configuration, neural_network):
+    try:
+        global args
+        args = parser.parse_args()
+        use_configuration(configuration)
+        if args.output is not None and args.output != '' and args.path[-1:] != '/':
+            args.output += '/'
+        global n_network
+        n_network = neural_network(args.neural_network)
+        global report_json
+        if args.checkpoint and os.path.isfile(args.statistics_dump):
+            report_json = report_json_class(args.statistics_dump, args.statistics_dump_rate, checkpoint=True)
+        else:
+            report_json = report_json_class(args.statistics_dump, args.statistics_dump_rate)
+        if args.path is None or args.path == '':
+            print("Give a path")
+            return
+        else:
+            if args.path[-1:] != '/':
+                args.path += '/'
+            PATH = '/home/chronopad/Documents/projects/memetic-cave-v3/' + args.path
+            files = os.listdir(PATH)
+            i = 0
+            for f in files:
+                i = i + 1
+                print(f"Processing file {i}/{len(files)} ({(i / len(files)) * 100} %)")
+                try:
+                    if f not in report_json.already_taken_files:
+                        test(PATH, f)
+                    else:
+                        logging.info('Skipping file bc of restored checkpoint [' + str(f) + ']')
+                except Exception as e:
+                    logging.exception('An exception occurred while calling main with file ' + str(f))
+                    logging.error(e, exc_info=True)
+
+            report_json.dump_to_file()
+
+    except Exception as e:
+        print(e)
+
+
+def use_configuration(configuration):
+    # args.path = configuration['path']
+    args.statistics_dump = configuration['statistics_dump']
+    args.neural_network = configuration['neural_network']
+    args.cross = configuration['cross']
+    args.checkpoint = configuration['checkpoint']
+    args.mutation_I = configuration['mutation_I']
+    args.mutation_II = configuration['mutation_II']
+    args.mutation_method = configuration['mutation_method']
+    args.section_expand = configuration['section_expand']
+
 
 if __name__ == '__main__':
-    main()
+    configuration = dict()
+    # configuration['path'] = '/home/chronopad/Documents/projects/memetic-cave-v3/malwares/expgen-b2'
+    configuration['statistics_dump'] = "stats.json"
+    configuration['neural_network'] = "src/MalConv.model"
+    configuration['cross'] = 4
+    configuration['checkpoint'] = False
+    configuration['mutation_I'] = 0.1
+    configuration['mutation_II'] = 0.1
+    configuration['mutation_method'] = 2
+    configuration['section_expand'] = -1
+    base_test(main, configuration, malconv)

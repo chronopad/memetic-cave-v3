@@ -68,7 +68,7 @@ def geneticOptimizationYuste(targetDir):
     cmd = (
         f'{LOAD_PYENV}; '
         f'pyenv activate {ENVIRONMENT_1}; '
-        f'python3 genetic-optimization-v1.py --path {targetDir}; '
+        f'python3 genetic-optimization-v3.py --path {targetDir}; '
         f'pyenv deactivate'
     )
 
@@ -94,8 +94,8 @@ initMalConvScore = getMalConvScore(sourceDir, fileHash)
 initEMBER2024PEScore = getEMBER2024PEScore(sourceDir, fileHash)
 
 print("Starting modification...")
-geneticOptimizationYuste(outdir)
-# memeticOptimization(f"{sourceDir}/{fileHash}.exe")
+# geneticOptimizationYuste(outdir)
+memeticOptimization(f"{outdir}/{fileHash}.exe")
 print("Finished modification!")
 
 finalMalConvScore = getMalConvScore(outdir, fileHash)
