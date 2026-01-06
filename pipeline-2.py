@@ -48,7 +48,7 @@ else:
 
 valid_counter = 0
 files = os.listdir(dataset_path)
-while valid_counter < max_counter:
+while valid_counter < max_counter and files:
     f = random.choice(files)
     files.remove(f)
     try:
