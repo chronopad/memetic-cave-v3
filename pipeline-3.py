@@ -58,7 +58,7 @@ def modifyFile(filepath):
     size_re = re.search(r"\[\*\]\s*Size ratio:\s*(\d+)\s*/\s*(\d+)", output)
 
     if not (gen_re and time_re and size_re):
-        raise RuntimeError("Failed to parse optimizer output")
+        raise RuntimeError("Failed to parse optimizer output: " + output)
 
     generation = int(gen_re.group(1))
     cpu_time   = round(float(time_re.group(1)), 6)
