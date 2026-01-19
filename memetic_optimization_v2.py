@@ -668,16 +668,19 @@ def main(binary):
                     shutil.copy(binary, f"{binary}_inc")
 
                     r2 = r2_bind(f"{binary}_inc")
+                    logging.info("[+] Checkpoint 1")
                     spaces = r2.main(sizeRatio, -1)
+                    logging.info("[+] Checkpoint 2")
                     try: r2.close()
                     except: pass 
+                    logging.info("[+] Checkpoint 3")
                 if spaces["expand"] is None:
                     print(f"[!] Expansion failure occured")               # Cave expansion failure case, exit immediately
                     success = True 
                     generation = 9999999999999999
                     sizeRatio = 9999999999999999
                 else:
-                    logging.info("[+] Spaces exist, proceeding to optimizer!")
+                    logging.info("[+] Checkpoint 4")
                     optimizer = MemeticOptimizer(f"{binary}_inc", spaces) # MemeticOptimizer initialization
                     generation, success = optimizer.optimize()
                 
