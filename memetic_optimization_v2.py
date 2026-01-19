@@ -323,11 +323,11 @@ class r2_bind():
 
     def main(self, size, section_expand=0):
         data = {}
-        logging.info["[+] Checkpoint 1.1"]
+        logging.info("[+] Checkpoint 1.1")
         data['sections'] = self.get_sections_spaces_aggressive()
-        logging.info["[+] Checkpoint 1.2"]
+        logging.info("[+] Checkpoint 1.2")
         data['expand'] = self.get_expand_sections(data=data, size=size, section_expand=section_expand)
-        logging.info["[+] Checkpoint 1.3"]
+        logging.info("[+] Checkpoint 1.3")
         return data
 
     def get_sections_spaces_aggressive(self):
